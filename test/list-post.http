@@ -1,0 +1,2 @@
+GET http://127.0.0.1:8000/api/post/list?page=0&items_per_page=4
+Accept: application/json

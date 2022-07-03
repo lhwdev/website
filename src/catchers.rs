@@ -7,7 +7,6 @@ pub fn catchers() -> Vec<Catcher> {
     catchers![not_found]
 }
 
-
 #[catch(404)]
 pub fn not_found(req: &Request<'_>) -> Template {
     Template::render(
@@ -17,3 +16,11 @@ pub fn not_found(req: &Request<'_>) -> Template {
         }),
     )
 }
+
+
+pub fn api_catchers() -> Vec<Catcher> {
+    catchers![api_not_found]
+}
+
+#[catch(404)]
+pub fn api_not_found(_req: &Request<'_>) -> () {}

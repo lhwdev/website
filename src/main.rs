@@ -8,13 +8,11 @@ mod catchers;
 use rocket::{launch, routes};
 use rocket::fairing::{self, AdHoc};
 use rocket::{Build, Rocket};
-use rocket_dyn_templates::Template;
 
 use migration::MigratorTrait;
-use sea_orm_rocket::{Database};
+use sea_orm_rocket::Database;
 
 use crate::api::api_routes;
-use crate::catchers::catchers;
 use crate::files::get_static;
 use crate::db::Db;
 
@@ -31,7 +29,8 @@ fn rocket() -> _ {
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
         .mount("/", routes![get_static])
+        .register("/", catchers::catchers())
         .mount("/api", api_routes())
-        .register("/", catchers())
+        .register("/api", catchers::api_catchers())
         // .attach(Template::fairing())
 }
