@@ -33,5 +33,5 @@ fn rocket() -> _ {
         .mount("/", routes![get_static])
         .mount("/api", api_routes())
         .register("/", catchers())
-        .attach(Template::fairing())
+        // .attach(Template::fairing())
 }

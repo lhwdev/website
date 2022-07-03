@@ -13,5 +13,7 @@ async fn main() {
         std::env::set_var(key, database_url);
     }
 
+    std::env::set_var(key, format!("{}?mode=rwc", std::env::var(key).unwrap()));
+
     cli::run_cli(migration::Migrator).await;
 }
