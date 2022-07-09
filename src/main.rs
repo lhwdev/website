@@ -2,6 +2,7 @@ mod api;
 mod files;
 mod db;
 mod utils;
+mod manager;
 
 mod catchers;
 

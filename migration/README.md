@@ -1,4 +1,8 @@
-# Running Migrator CLI
+# This is discarded
+
+IDK what is this
+
+## Running Migrator CLI
 
 - Apply all pending migrations
     ```sh

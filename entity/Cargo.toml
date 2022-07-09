@@ -10,6 +10,8 @@ name = "entity"
 path = "src/lib.rs"
 
 [dependencies]
+async-std = { version = "^1", features = ["attributes", "tokio1"] }
 rocket = { version = "0.5.0-rc.2", features = [ "json" ] }
+sea-orm = { version = "^0.8.0", features = [ "runtime-tokio-native-tls", "sqlx-sqlite" ] }
+chrono = "0.4"
 
-sea-orm = "^0.8.0"

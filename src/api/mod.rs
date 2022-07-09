@@ -1,4 +1,5 @@
 pub mod post;
+pub mod auth;
 mod utils;
 
 use rocket::Route;
