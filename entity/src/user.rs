@@ -52,4 +52,13 @@ impl Related<session::Entity> for Entity {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-// API implementations
+// Other models
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct AccessToken(pub String);
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct RefreshToken(pub String);
+

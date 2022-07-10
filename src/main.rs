@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 mod api;
 mod files;
 mod db;

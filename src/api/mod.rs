@@ -1,6 +1,6 @@
 pub mod post;
 pub mod auth;
-mod utils;
+pub mod utils;
 
 use rocket::Route;
 
