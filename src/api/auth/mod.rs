@@ -2,10 +2,11 @@ mod password_hash;
 
 use chrono::Utc;
 use entity::user::{AccessToken, RefreshToken, UserCreatePatch};
+use rocket::http::Status;
 use rocket::serde::Serialize;
 use rocket::serde::{json::Json, Deserialize};
 use rocket::{get, post, routes, Route};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, ModelTrait};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, ModelTrait, QuerySelect};
 use sea_orm_rocket::Connection;
 
 use crate::db::Db;
@@ -73,6 +74,20 @@ async fn login_challenge(
 #[post("/auth/register", data = "<info>")]
 async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -> Result<Json<user::Model>, ApiDbError> {
     let db = connection.into_inner();
+
+    // check if name collides
+    let previous = user::Entity::find()
+        .filter(user::Column::Name.eq(info.name.clone()))
+        .select_only()
+        .column(user::Column::Id)
+        .all(db)
+        .await
+        .map_err(map_sea_orm_error)?;
+    
+    if !previous.is_empty() {
+        return Err(ApiDbError::new(Status::Forbidden, "Username already exists".to_string()));
+    }
+    
     
     let user = user::ActiveModel {
         name: Set(info.name.clone()),
