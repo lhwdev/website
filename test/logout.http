@@ -1,0 +1,3 @@
+POST http://127.0.0.1:8000/api/auth/logout
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjIsInNpZCI6NCwiaWF0IjoxNjU3Njk1ODY3MDQzLCJleHAiOjE2NTc3MzE4NjcwNDMsImlzcyI6ImNyZWF0ZV90b2tlbiIsImluYyI6MCwia2luZCI6ImFjY2VzcyJ9.diqaqzgpiOAm8ob0tzaI11srOYcJTvRdWWVKD7ybdRY

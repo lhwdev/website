@@ -1,4 +1,5 @@
 #![feature(let_chains)]
+#![feature(try_trait_v2)]
 mod api;
 mod files;
 mod db;

@@ -1,0 +1,9 @@
+POST http://127.0.0.1:8000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "lhwdev2",
+  "nickname": "이현우",
+  "email": "lhwdev6@outlook.com",
+  "password": "12345678"
+}

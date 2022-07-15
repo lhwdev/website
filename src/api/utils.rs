@@ -3,9 +3,10 @@ use rocket::{Request, http::Status, response::{Result, Responder}};
 use serde_json::json;
 
 
+#[derive(Debug)]
 pub struct ApiDbError {
-    status: Status,
-    message: String
+    pub status: Status,
+    pub message: String
 }
 
 impl ApiDbError {

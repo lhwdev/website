@@ -24,6 +24,7 @@ async fn main() {
     let statements = vec![
         builder.build(&schema.create_table_from_entity(entity::post::Entity)),
         builder.build(&schema.create_table_from_entity(entity::user::Entity)),
+        builder.build(&schema.create_table_from_entity(entity::session::Entity)),
     ];
 
     for statement in statements {

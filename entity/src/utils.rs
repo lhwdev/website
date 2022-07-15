@@ -14,8 +14,8 @@ impl Into<RawTime> for Time {
     }
 }
 
-impl RawTime {
-    fn time(&self) -> Time {
+impl Into<Time> for RawTime {
+    fn into(self) -> Time {
         chrono::Utc
             .timestamp_opt(self.0 / 1000, ((self.0 % 1000) * 1_000_000) as u32)
             .unwrap()

@@ -1,9 +1,3 @@
-POST http://127.0.0.1:8000/api/post/item
+GET http://127.0.0.1:8000/api/auth/me
 Content-Type: application/json
 Authorization: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjIsInNpZCI6NSwiaWF0IjoxNjU3Njk2MDUwNzA0LCJleHAiOjE2NTc3MzIwNTA3MDQsImlzcyI6ImNyZWF0ZV90b2tlbiIsImluYyI6MCwia2luZCI6ImFjY2VzcyJ9.gG8gBoZ03D5SV6ofqIWCA76EyLWrT6YhaX7CVKWshl0
-
-{
-  "id": 0,
-  "title": "Hello, world 2!",
-  "text": "I am a iron man"
-}

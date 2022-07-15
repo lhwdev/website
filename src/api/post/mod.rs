@@ -9,6 +9,7 @@ use crate::db::Db;
 use entity::post::{ActiveModel, Column, Entity, Model, ModelCreatePatch};
 
 use crate::api::utils::{map_sea_orm_error, ApiDbError};
+use crate::manager::user::User;
 
 pub fn api_routes() -> Vec<Route> {
     routes![list_post, get_post, create_post]
@@ -79,6 +80,7 @@ async fn get_post(id: u32, connection: Connection<'_, Db>) -> Result<Json<Model>
 #[post("/post/item", data = "<item>")]
 async fn create_post(
     item: Json<ModelCreatePatch>,
+    user: User,
     connection: Connection<'_, Db>,
 ) -> Result<serde_json::Value, ApiDbError> {
     let db = connection.into_inner();
@@ -86,6 +88,7 @@ async fn create_post(
     let model = ActiveModel {
         title: Set(item.title.to_owned()),
         text: Set(item.text.to_owned()),
+        author: Set(user.user.id),
         ..Default::default()
     }
     .save(db)

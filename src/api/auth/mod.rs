@@ -1,21 +1,21 @@
 mod password_hash;
 
 use chrono::Utc;
-use entity::user::{AccessToken, RefreshToken};
+use entity::user::{AccessToken, RefreshToken, UserCreatePatch};
 use rocket::serde::Serialize;
 use rocket::serde::{json::Json, Deserialize};
-use rocket::{post, routes, Route};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use rocket::{get, post, routes, Route};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, ModelTrait};
 use sea_orm_rocket::Connection;
 
 use crate::db::Db;
-use crate::manager::user::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION};
+use crate::manager::user::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION, User};
 use entity::user;
 
 use super::utils::{map_sea_orm_error, ApiDbError};
 
 pub fn api_routes() -> Vec<Route> {
-    routes![login_challenge]
+    routes![login_challenge, register, get_my_info, logout]
 }
 
 #[derive(Deserialize)]
@@ -57,15 +57,49 @@ async fn login_challenge(
     let now = Utc::now();
 
     Ok(Json(if let Some(is_persist) = persist && is_persist {
-        let session = create_session(db, &user, now + REFRESH_TOKEN_DURATION()).await?;
-        let refresh_token = RefreshToken(create_refresh_token(&user, &session, now));
-        let access_token = AccessToken(create_access_token(&user, &session, now));
+        let session = create_session(db, &user, now + REFRESH_TOKEN_DURATION(), true).await?;
+        let refresh_token = RefreshToken(create_refresh_token(&user, &session, now, 0));
+        let access_token = AccessToken(create_access_token(&user, &session, now, 0));
 
         LoginResult::Persist { refresh_token, access_token }
     } else {
-        let session = create_session(db, &user, now + ACCESS_TOKEN_DURATION()).await?;
-        let access_token = AccessToken(create_access_token(&user, &session, now));
+        let session = create_session(db, &user, now + ACCESS_TOKEN_DURATION(), false).await?;
+        let access_token = AccessToken(create_access_token(&user, &session, now, 0));
         
         LoginResult::Once(access_token)
     }))
+}
+
+#[post("/auth/register", data = "<info>")]
+async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -> Result<Json<user::Model>, ApiDbError> {
+    let db = connection.into_inner();
+    
+    let user = user::ActiveModel {
+        name: Set(info.name.clone()),
+        nickname: Set(info.nickname.clone()),
+        email: Set(info.email.clone()),
+        password_phc: Set(password_hash::hash_password(&info.password)?),
+        ..Default::default()
+    }
+    .insert(db)
+    .await
+    .map_err(map_sea_orm_error)?;
+
+    Ok(Json(user))
+}
+
+
+#[get("/auth/me")]
+async fn get_my_info(user: User) -> Json<User> {
+    return Json(user)
+}
+
+#[post("/auth/logout")]
+async fn logout(user: User, connection: Connection<'_, Db>) -> Result<(), ApiDbError> {
+    let db = connection.into_inner();
+
+    user.session.delete(db).await
+        .map_err(map_sea_orm_error)?;
+
+    Ok(())
 }

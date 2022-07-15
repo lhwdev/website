@@ -4,7 +4,7 @@ use sea_orm::entity::prelude::*;
 use super::user::{self, Uid};
 use crate::utils::Time;
 
-pub type SessionId = u64;
+pub type SessionId = u32;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -16,6 +16,8 @@ pub struct Model {
     pub uid: Uid, // TODO: additional user environments
 
     pub expires_at: Time,
+
+    pub persist: bool,
 
     pub counter: u32, // incremental counter to make previous token invalid
 }

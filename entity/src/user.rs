@@ -20,13 +20,13 @@ pub struct UserEditPatch {
     pub email: Option<String>,
 }
 
-pub type Uid = u64;
+pub type Uid = u32;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
 #[sea_orm(table_name = "users")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
+    #[sea_orm(primary_key, /* auto_increment = false */)]
     pub id: Uid, // uuid
 
     pub name: String, // typically called 'id', but named 'name' to distinguish from uuid

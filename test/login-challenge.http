@@ -1,0 +1,7 @@
+POST http://127.0.0.1:8000/api/auth/login/challenge
+Content-Type: application/json
+
+{
+  "name": "lhwdev2",
+  "password": "12345678"
+}

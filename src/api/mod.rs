@@ -1,10 +1,9 @@
-pub mod post;
 pub mod auth;
+pub mod post;
 pub mod utils;
 
 use rocket::Route;
 
-
 pub fn api_routes() -> Vec<Route> {
-    return post::api_routes();
+    [post::api_routes(), auth::api_routes()].concat()
 }
