@@ -84,6 +84,8 @@ async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -
         .await
         .map_err(map_sea_orm_error)?;
     
+    // TODO: should check if name conforms some format like [a-zA-Z0-9]+
+    
     if !previous.is_empty() {
         return Err(ApiDbError::new(Status::Forbidden, "Username already exists".to_string()));
     }
