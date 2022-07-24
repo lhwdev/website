@@ -6,7 +6,7 @@ repository = "https://github.com/lhwdev/website"
 
 
 [workspace]
-members = [".", "entity", "migration"]
+members = [".", "entity", "migration", "utils", "utils_macro", "utils_macro_test"]
 
 [dependencies]
 async-stream = "^0.3"

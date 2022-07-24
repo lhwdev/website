@@ -1,7 +1,10 @@
+use std::{collections::HashSet, ops::{Deref, DerefMut}};
+
 use rocket::serde::{Deserialize, Serialize};
-use sea_orm::entity::prelude::*;
+use sea_orm::{entity::prelude::*, Value, sea_query::tests_cfg::json, TryGetable};
 
 use super::session;
+use utils::ThinWrapperSerde;
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -22,6 +25,15 @@ pub struct UserEditPatch {
 
 pub type Uid = u32;
 
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Privilege {
+    Admin,
+}
+
+#[derive(ThinWrapperSerde, PartialEq, FromJsonQueryResult)]
+pub struct Privileges(Vec<Privilege>);
+
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
 #[sea_orm(table_name = "users")]
@@ -36,6 +48,8 @@ pub struct Model {
     pub password_phc: String, // phc-format password string. double-encoded (from client, from server)
 
     pub email: String,
+
+    pub privileges: Privileges
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

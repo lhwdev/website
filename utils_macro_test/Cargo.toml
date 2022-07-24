@@ -1,0 +1,16 @@
+[package]
+name = "utils_macro_test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+syn = { version = "1.0", default_features = false, features = [ "parsing", "derive", "full", "clone-impls", "printing" ] }
+quote = "1.0"
+proc-macro2 ="1.0.40"
+# darling = "0.14.0"
+serde = "1.0.137"
+
+[lib]
+name = "utils_macro_test"
+path = "src/lib.rs"
