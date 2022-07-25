@@ -1,39 +1,55 @@
-use quote::{quote, ToTokens};
+use darling::{FromMeta, util::parse_attribute_to_meta_list};
+use quote::quote;
 use proc_macro2::TokenStream;
-use syn::{parse_macro_input, Data, DeriveInput, Type, ExprPath, parse2, PathArguments};
+use syn::{parse_macro_input, Data, DeriveInput, Type, ExprPath, parse2, PathArguments, Path, Meta};
 
-#[proc_macro_derive(ThinWrapper)]
-pub fn thin_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let item = if let Data::Struct(inner) = &input.data {
-        inner
-    } else {
-        unreachable!()
-    };
+// #[proc_macro_derive(ThinWrapper)]
+// pub fn thin_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+//     let input = parse_macro_input!(input as DeriveInput);
+//     let item = if let Data::Struct(inner) = &input.data {
+//         inner
+//     } else {
+//         unreachable!()
+//     };
 
-    let ident = &input.ident;
-    let inner_type = &item.fields.iter().next().expect("No field").ty.to_token_stream();
+//     let ident = &input.ident;
+//     let inner_type = &item.fields.iter().next().expect("No field").ty.to_token_stream();
 
-    let after = quote! {
-        impl Deref for #ident {
-            type Target = #inner_type;
+//     let after = quote! {
+//         impl Deref for #ident {
+//             type Target = #inner_type;
 
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
+//             fn deref(&self) -> &Self::Target {
+//                 &self.0
+//             }
+//         }
 
-        impl DerefMut for #ident {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.0
-            }
-        }
-    };
+//         impl DerefMut for #ident {
+//             fn deref_mut(&mut self) -> &mut Self::Target {
+//                 &mut self.0
+//             }
+//         }
+//     };
 
-    after.into()
+//     after.into()
+// }
+
+#[derive(Default, FromMeta)]
+#[darling(default)]
+struct ThinWrapper {
+    constructor: bool
 }
 
-#[proc_macro_derive(ThinWrapperSerde)]
+
+fn is_ident(path: &Path, text: &str) -> bool {
+    match path.get_ident() {
+        Some(ident) => ident.to_string() == text,
+        None => false
+    }
+}
+
+
+#[proc_macro_derive(ThinWrapperSerde, attributes(thin_wrapper))]
 pub fn thin_wrapper_serde(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     transform_thin_wrapper_serde(input).into()
@@ -48,6 +64,14 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
 
     let ident = &input.ident;
     let inner_type = &item.fields.iter().next().expect("No field").ty;
+
+    let raw_attr = input.attrs.iter().find(|attr| is_ident(&attr.path, "thin_wrapper"));
+    let attr: Option<ThinWrapper> = if let Some(raw_attr) = raw_attr {
+        let meta = raw_attr.parse_meta().unwrap();
+        Some(ThinWrapper::from_meta(&meta).expect("Wrong metadata content of thin_wrapper"))
+    } else {
+        None
+    };
 
     // Type is inferred here / Type<Argument>::deserialize is wrong grammer
     let inner_type_mapped = if let Type::Path(path) = inner_type {
@@ -64,7 +88,7 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
         unreachable!();
     };
 
-    let after = quote! {
+    let mut after = quote! {
         impl std::ops::Deref for #ident {
             type Target = #inner_type;
 
@@ -95,6 +119,18 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
             }
         }
     };
+
+    if let Some(attr) = attr {
+        if attr.constructor {
+            after.extend(quote! {
+                impl #ident {
+                    pub fn new(inner: #inner_type) -> Self {
+                        Self(inner)
+                    }
+                }
+            });
+        }
+    }
 
     after
 }

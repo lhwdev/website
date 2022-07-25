@@ -29,6 +29,7 @@ pub enum Privilege {
 }
 
 #[derive(ThinWrapperSerde, PartialEq, FromJsonQueryResult, Clone, Debug)]
+#[thin_wrapper(constructor)]
 pub struct Privileges(Vec<Privilege>);
 
 

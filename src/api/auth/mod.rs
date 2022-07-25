@@ -1,7 +1,7 @@
 mod password_hash;
 
 use chrono::Utc;
-use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege};
+use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege, Privileges};
 use rocket::http::Status;
 use rocket::serde::Serialize;
 use rocket::serde::{json::Json, Deserialize};
@@ -100,6 +100,7 @@ async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -
         nickname: Set(info.nickname.clone()),
         email: Set(info.email.clone()),
         password_phc: Set(password_hash::hash_password(&info.password)?),
+        privileges: Set(Privileges::new(vec![Privilege::Me])),
         ..Default::default()
     }
     .insert(db)
