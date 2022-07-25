@@ -2,8 +2,6 @@ use quote::{quote, ToTokens};
 use proc_macro2::TokenStream;
 use syn::{parse_macro_input, Data, DeriveInput, Type, ExprPath, parse2, PathArguments};
 
-use std::ops::{Deref, DerefMut};
-
 #[proc_macro_derive(ThinWrapper)]
 pub fn thin_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -51,17 +49,13 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let inner_type = &item.fields.iter().next().expect("No field").ty;
 
+    // Type is inferred here / Type<Argument>::deserialize is wrong grammer
     let inner_type_mapped = if let Type::Path(path) = inner_type {
         let mut path = path.clone();
         let segments = &mut path.path.segments;
-        if segments.len() >= 2 {
-            let mut iter = segments.iter_mut();
-            let last = iter.next_back().unwrap();
-            let second_last = iter.next_back().unwrap();
-            if let PathArguments::AngleBracketed(_) = &second_last.arguments {
-                if let PathArguments::None = last.arguments {
-                    std::mem::swap(&mut last.arguments, &mut second_last.arguments);
-                }
+        for segment in segments {
+            if let PathArguments::AngleBracketed(_) = &segment.arguments {
+                segment.arguments = PathArguments::None;
             }
         }
         
@@ -71,7 +65,7 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
     };
 
     let after = quote! {
-        impl Deref for #ident {
+        impl std::ops::Deref for #ident {
             type Target = #inner_type;
 
             fn deref(&self) -> &Self::Target {
@@ -79,7 +73,7 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
             }
         }
 
-        impl DerefMut for #ident {
+        impl std::ops::DerefMut for #ident {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.0
             }
@@ -101,7 +95,6 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
             }
         }
     };
-    println!("{}", after.to_string());
 
     after
 }

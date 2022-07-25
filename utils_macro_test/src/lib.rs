@@ -1,8 +1,7 @@
-mod result;
 
 use quote::{quote, ToTokens};
 use proc_macro2::TokenStream;
-use syn::{Data, DeriveInput, Type, ExprPath, parse2};
+use syn::{Data, DeriveInput, Type, ExprPath, parse2, PathArguments};
 
 use std::ops::{Deref, DerefMut};
 
@@ -17,7 +16,14 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
     let inner_type = &item.fields.iter().next().expect("No field").ty;
 
     let inner_type_mapped = if let Type::Path(path) = inner_type {
-        let path = path.clone();
+        let mut path = path.clone();
+        let segments = &mut path.path.segments;
+        for segment in segments {
+            if let PathArguments::AngleBracketed(_) = &segment.arguments {
+                segment.arguments = PathArguments::None;
+            }
+        }
+        
         ExprPath { attrs: vec![], qself: path.qself, path: path.path }
     } else {
         unreachable!();
@@ -54,7 +60,6 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
             }
         }
     };
-    println!("{}", after.to_string());
 
     after
 }

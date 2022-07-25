@@ -1,7 +1,7 @@
 mod password_hash;
 
 use chrono::Utc;
-use entity::user::{AccessToken, RefreshToken, UserCreatePatch};
+use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege};
 use rocket::http::Status;
 use rocket::serde::Serialize;
 use rocket::serde::{json::Json, Deserialize};
@@ -51,9 +51,13 @@ async fn login_challenge(
         .await
         .map_err(map_sea_orm_error)?
         .unwrap();
-
+    
     let password = &data.password.as_bytes();
     password_hash::verify_password(&user.password_phc, password)?;
+    
+    if !user.privileges.contains(&Privilege::Me) { // typically banned
+        return Err(ApiDbError::new(Status::Forbidden, "You do not have privilege to do anything.".to_string()))
+    }
 
     let now = Utc::now();
 

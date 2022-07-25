@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-pub mod sea_orm_json;
-
 pub trait ThinWrapper {}
 pub trait ThinWrapperSerde<'de>: ThinWrapper + Serialize + Deserialize<'de> {}
 

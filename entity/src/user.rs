@@ -1,7 +1,5 @@
-use std::{collections::HashSet, ops::{Deref, DerefMut}};
-
 use rocket::serde::{Deserialize, Serialize};
-use sea_orm::{entity::prelude::*, Value, sea_query::tests_cfg::json, TryGetable};
+use sea_orm::entity::prelude::*;
 
 use super::session;
 use utils::ThinWrapperSerde;
@@ -27,10 +25,10 @@ pub type Uid = u32;
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Privilege {
-    Admin,
+    Me, Admin,
 }
 
-#[derive(ThinWrapperSerde, PartialEq, FromJsonQueryResult)]
+#[derive(ThinWrapperSerde, PartialEq, FromJsonQueryResult, Clone, Debug)]
 pub struct Privileges(Vec<Privilege>);
 
 

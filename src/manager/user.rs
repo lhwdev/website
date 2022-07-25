@@ -14,7 +14,7 @@ use sha2::Sha256;
 
 use entity::{
     session::{self, SessionId},
-    user::{self, Uid},
+    user::{self, Uid, Privilege},
     utils::{RawTime, Time},
 };
 
@@ -189,7 +189,11 @@ async fn from_request_internal<'a, 'r>(request: &'r Request<'_>) -> Result<User,
         .await
         .map_err(map_sea_orm_error)?
         .ok_or_else(|| ApiDbError::new(Status::Forbidden, "User not found".to_string()))?;
-        
+    
+    if !user.privileges.contains(&Privilege::Me) { // typically banned
+        return Err(ApiDbError::new(Status::Forbidden, "You do not have privilege to do anything.".to_string()))
+    }
+    
     let session = session::Entity::find_by_id(token.sid)
         .one(db)
         .await
