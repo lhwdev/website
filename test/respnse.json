@@ -1,0 +1,6 @@
+{
+  "persist": {
+    "refresh_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjEsInNpZCI6MywiaWF0IjoxNjU4OTI3NTQ0MzQ3LCJleHAiOjE2NjE1MTk1NDQzNDcsImlzcyI6ImNyZWF0ZV90b2tlbiIsImluYyI6MCwia2luZCI6InJlZnJlc2gifQ.BnCCyJbeYODUqhckCJK3-R-J8e2dkb-KrHOE4XWU5Zw",
+    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjEsInNpZCI6MywiaWF0IjoxNjU4OTI3NTQ0MzQ3LCJleHAiOjE2NTg5NjM1NDQzNDcsImlzcyI6ImNyZWF0ZV90b2tlbiIsImluYyI6MCwia2luZCI6ImFjY2VzcyJ9.K6hHWccvqNI73CKM_K9x9EOxk9n3qpHcfT0w0SJqWqk"
+  }
+}

@@ -1,12 +1,15 @@
+use rocket::{
+    http::Status,
+    response::{Responder, Result},
+    Request,
+};
 use sea_orm::DbErr;
-use rocket::{Request, http::Status, response::{Result, Responder}};
-use serde_json::json;
+use serde_json::{json, Value};
 
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ApiDbError {
     pub status: Status,
-    pub message: String
+    pub message: String,
 }
 
 impl ApiDbError {
@@ -15,19 +18,25 @@ impl ApiDbError {
     }
 }
 
-impl <'r, 'o : 'r> Responder<'r, 'o> for ApiDbError {
-    fn respond_to(self, request: &'r Request<'_>) -> Result<'o> {
-        let json = json!({
+impl Into<Value> for ApiDbError {
+    fn into(self) -> Value {
+        json!({
             "error": {
                 "message": self.message
             }
-        });
-        let mut response = json.respond_to(request).unwrap();
-        response.set_status(self.status);
-        Ok(response)
+        })
     }
 }
 
+impl<'r, 'o: 'r> Responder<'r, 'o> for ApiDbError {
+    fn respond_to(self, request: &'r Request<'_>) -> Result<'o> {
+        let status = self.status;
+        let json: Value = self.into();
+        let mut response = json.respond_to(request).unwrap();
+        response.set_status(status);
+        Ok(response)
+    }
+}
 
 pub fn map_sea_orm_error(from: DbErr) -> ApiDbError {
     let (status, message) = match from {

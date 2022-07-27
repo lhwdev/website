@@ -1,29 +1,32 @@
 use async_trait::async_trait;
-use chrono::Duration;
+use chrono::{Duration, Utc};
 use hmac::{Hmac, Mac};
 use jwt::{SignWithKey, VerifyWithKey};
 use rocket::{
     http::Status,
     request::{self, FromRequest},
+    response::content::RawJson,
     serde::{Deserialize, Serialize},
     Request,
 };
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 use sea_orm_rocket::Connection;
+use serde_json::Value;
 use sha2::Sha256;
 
 use entity::{
     session::{self, SessionId},
-    user::{self, Uid, Privilege},
+    user::{self, Privilege, Uid},
     utils::{RawTime, Time},
 };
 
 use crate::{
     api::utils::{map_sea_orm_error, ApiDbError},
+    catchers::api_error_cache,
     db::Db,
 };
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub enum TokenKind {
     Refresh,
@@ -134,8 +137,8 @@ pub fn create_refresh_token(
 ) -> String {
     let session_expires_at = now + REFRESH_TOKEN_DURATION();
     let token_info = TokenRequest {
-        user: user,
-        session: session,
+        user,
+        session,
         issued_at: now,
         expires_at: session_expires_at,
         inc,
@@ -165,7 +168,17 @@ impl<'r> FromRequest<'r> for User {
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         match from_request_internal(request).await {
             Ok(user) => request::Outcome::Success(user),
-            Err(e) => request::Outcome::Failure((e.status, e)),
+            Err(e) => {
+                let e2 = e.clone();
+                api_error_cache(
+                    request,
+                    (
+                        e.status,
+                        RawJson(format!("{}", <ApiDbError as Into<Value>>::into(e))),
+                    ),
+                );
+                request::Outcome::Failure((e2.status, e2))
+            }
         }
     }
 }
@@ -175,12 +188,30 @@ async fn from_request_internal<'a, 'r>(request: &'r Request<'_>) -> Result<User,
         .headers()
         .get("Authorization")
         .next()
-        .ok_or_else(|| ApiDbError::new(Status::Forbidden, "No authorization".to_string()))?;
+        .ok_or_else(|| ApiDbError::new(Status::Unauthorized, "No authorization".to_string()))?;
 
     let token: RawTokenInfo = token_str
         .verify_with_key(&*KEY)
-        .map_err(|err| ApiDbError::new(Status::Forbidden, err.to_string()))?;
+        .map_err(|err| ApiDbError::new(Status::Unauthorized, err.to_string()))?;
 
+    // 1. validate with token itself
+    let exp: Time = token.exp.into();
+    let now = Utc::now();
+    if exp < now {
+        return Err(ApiDbError::new(
+            Status::Unauthorized,
+            "Token expired".to_string(),
+        ));
+    }
+
+    if token.kind != TokenKind::Access {
+        return Err(ApiDbError::new(
+            Status::Unauthorized,
+            "Invalid token kind: only access token can be used to authorize".to_string(),
+        ));
+    }
+
+    // 2. database lookup
     let connection: Connection<'_, Db> = Connection::from_request(request).await.unwrap();
     let db = connection.into_inner();
 
@@ -188,21 +219,30 @@ async fn from_request_internal<'a, 'r>(request: &'r Request<'_>) -> Result<User,
         .one(db)
         .await
         .map_err(map_sea_orm_error)?
-        .ok_or_else(|| ApiDbError::new(Status::Forbidden, "User not found".to_string()))?;
-    
-    if !user.privileges.contains(&Privilege::Me) { // typically banned
-        return Err(ApiDbError::new(Status::Forbidden, "You do not have privilege to do anything.".to_string()))
+        .ok_or_else(|| ApiDbError::new(Status::Unauthorized, "User not found".to_string()))?;
+
+    if !user.privileges.contains(&Privilege::Me) {
+        // typically banned
+        return Err(ApiDbError::new(
+            Status::Unauthorized,
+            "You do not have privilege to do anything.".to_string(),
+        ));
     }
-    
+
     let session = session::Entity::find_by_id(token.sid)
         .one(db)
         .await
         .map_err(map_sea_orm_error)?
-        .ok_or_else(|| ApiDbError::new(Status::Forbidden, "Session not found; did you logout?".to_string()))?;
-    
+        .ok_or_else(|| {
+            ApiDbError::new(
+                Status::Unauthorized,
+                "Session not found; did you logout?".to_string(),
+            )
+        })?;
+
     if token.inc != session.counter {
         return Err(ApiDbError::new(
-            Status::Forbidden,
+            Status::Unauthorized,
             "Invalid token: already disposed".to_string(),
         ));
     }
@@ -210,7 +250,7 @@ async fn from_request_internal<'a, 'r>(request: &'r Request<'_>) -> Result<User,
     Ok(User {
         user,
         session,
-        expires_at: token.exp.into(),
+        expires_at: exp,
         issued_at: token.iat.into(),
         kind: Some(token.kind),
     })
