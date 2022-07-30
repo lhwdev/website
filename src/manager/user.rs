@@ -99,11 +99,11 @@ pub async fn create_session(
 ) -> Result<session::Model, ApiDbError> {
     // TODO: protect against too much session DDOS
     session::ActiveModel {
+        id: Default::default(),
         uid: Set(user.id),
         expires_at: Set(expires_at),
         counter: Set(0),
         persist: Set(persist),
-        ..Default::default()
     }
     .insert(db)
     .await
@@ -118,8 +118,8 @@ pub fn create_access_token(
 ) -> String {
     let access_expires_at = now + ACCESS_TOKEN_DURATION();
     let token_info = TokenRequest {
-        user: user,
-        session: session,
+        user,
+        session,
         issued_at: now,
         expires_at: access_expires_at,
         inc,

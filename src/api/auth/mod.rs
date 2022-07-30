@@ -96,12 +96,12 @@ async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -
     
     
     let user = user::ActiveModel {
+        id: Default::default(),
         name: Set(info.name.clone()),
         nickname: Set(info.nickname.clone()),
         email: Set(info.email.clone()),
         password_phc: Set(password_hash::hash_password(&info.password)?),
         privileges: Set(Privileges::new(vec![Privilege::Me])),
-        ..Default::default()
     }
     .insert(db)
     .await
