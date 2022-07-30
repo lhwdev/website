@@ -1,7 +1,7 @@
-use darling::{FromMeta, util::parse_attribute_to_meta_list};
+use darling::FromMeta;
 use quote::quote;
 use proc_macro2::TokenStream;
-use syn::{parse_macro_input, Data, DeriveInput, Type, ExprPath, parse2, PathArguments, Path, Meta};
+use syn::{parse_macro_input, Data, DeriveInput, Type, ExprPath, PathArguments, Path};
 
 // #[proc_macro_derive(ThinWrapper)]
 // pub fn thin_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -134,9 +134,9 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
 
     after
 }
-
+#[cfg(test)]
 fn transform_thin_wrapper_serde_test(input: TokenStream) -> TokenStream {
-    transform_thin_wrapper_serde(parse2(input).unwrap())
+    transform_thin_wrapper_serde(syn::parse2(input).unwrap())
 }
 
 #[cfg(test)]

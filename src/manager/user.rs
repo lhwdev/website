@@ -60,12 +60,6 @@ struct RawTokenInfo {
     pub kind: TokenKind,
 }
 
-pub struct Token<'a> {
-    pub info: TokenRequest<'a>,
-
-    pub data: String,
-}
-
 lazy_static::lazy_static! { // TODO: what is secret?
     static ref KEY: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").unwrap();
 }
@@ -84,9 +78,11 @@ pub fn create_token(info: &TokenRequest) -> String {
     claims.sign_with_key(&*KEY).unwrap()
 }
 
+#[allow(non_snake_case)]
 pub fn ACCESS_TOKEN_DURATION() -> chrono::Duration {
     Duration::hours(10)
 }
+#[allow(non_snake_case)]
 pub fn REFRESH_TOKEN_DURATION() -> chrono::Duration {
     Duration::days(30)
 }

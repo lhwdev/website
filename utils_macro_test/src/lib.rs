@@ -1,10 +1,9 @@
 
-use quote::{quote, ToTokens};
+use quote::quote;
 use proc_macro2::TokenStream;
-use syn::{Data, DeriveInput, Type, ExprPath, parse2, PathArguments};
+use syn::{Data, DeriveInput, Type, ExprPath, PathArguments};
 
-use std::ops::{Deref, DerefMut};
-
+#[allow(dead_code)]
 fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
     let item = if let Data::Struct(inner) = &input.data {
         inner
@@ -64,8 +63,9 @@ fn transform_thin_wrapper_serde(input: DeriveInput) -> TokenStream {
     after
 }
 
+#[cfg(test)]
 fn transform_thin_wrapper_serde_test(input: TokenStream) -> TokenStream {
-    transform_thin_wrapper_serde(parse2(input).unwrap())
+    transform_thin_wrapper_serde(syn::parse2(input).unwrap())
 }
 
 #[cfg(test)]
