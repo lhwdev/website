@@ -1,22 +1,23 @@
 mod password_hash;
 
 use chrono::Utc;
-use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege, Privileges};
+use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege, Privileges, UserEditPatch};
 use rocket::http::Status;
 use rocket::serde::Serialize;
 use rocket::serde::{json::Json, Deserialize};
-use rocket::{get, post, routes, Route};
+use rocket::{get, post, patch, routes, Route};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, ModelTrait, QuerySelect};
 use sea_orm_rocket::Connection;
 
 use crate::db::Db;
+use crate::edit;
 use crate::manager::user::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION, User};
 use entity::user;
 
 use super::utils::{map_sea_orm_error, ApiDbError};
 
 pub fn api_routes() -> Vec<Route> {
-    routes![login_challenge, register, get_my_info, logout]
+    routes![login_challenge, register, get_my_info, edit_my_info, logout]
 }
 
 #[derive(Deserialize)]
@@ -113,7 +114,29 @@ async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -
 
 #[get("/auth/me")]
 async fn get_my_info(user: User) -> Json<User> {
-    return Json(user)
+    return Json(user) // temporary; must not print everything
+}
+
+#[patch("/auth/me", data = "<patch>")]
+async fn edit_my_info(patch: Json<UserEditPatch>, user: User, connection: Connection<'_, Db>) -> Result<(), ApiDbError> {
+    let patch = patch.into_inner();
+    let db = connection.into_inner();
+
+    let password_phc = if let Some(pass) = &patch.password {
+        Some(password_hash::hash_password(pass)?)
+    } else {
+        None
+    };
+    
+    let mut value: user::ActiveModel = user.user.into();
+
+    edit!(value.nickname = patch.nickname);
+    edit!(value.password_phc = password_phc);
+    edit!(value.email = patch.email);
+
+    value.update(db).await.map_err(map_sea_orm_error)?;
+
+    Ok(())
 }
 
 #[post("/auth/logout")]
