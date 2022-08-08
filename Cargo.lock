@@ -3509,8 +3509,10 @@ dependencies = [
  "rocket_dyn_templates",
  "sea-orm",
  "sea-orm-rocket",
+ "serde",
  "serde_json",
  "sha2",
+ "utils",
 ]
 
 [[package]]

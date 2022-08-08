@@ -9,7 +9,7 @@ use crate::db::Db;
 use entity::post::{ActiveModel, Column, Entity, Model, ModelCreatePatch};
 
 use crate::api::utils::{map_sea_orm_error, ApiDbError};
-use crate::manager::user::User;
+use crate::manager::user::users::User;
 
 pub fn api_routes() -> Vec<Route> {
     routes![list_post, get_post, create_post]

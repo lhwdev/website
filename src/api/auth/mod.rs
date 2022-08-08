@@ -3,32 +3,30 @@ mod password_hash;
 use chrono::Utc;
 use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege, Privileges, UserEditPatch};
 use rocket::http::Status;
-use rocket::serde::Serialize;
-use rocket::serde::{json::Json, Deserialize};
-use rocket::{get, post, patch, routes, Route};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, ModelTrait, QuerySelect};
+use rocket::serde::json::Json;
+use rocket::{get, post, patch, delete, routes, Route, Request};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, QuerySelect};
 use sea_orm_rocket::Connection;
+use serde::{Serialize, Deserialize};
 
 use crate::db::Db;
 use crate::edit;
-use crate::manager::user::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION, User};
+use crate::manager::user::{core::UserData, users::User, token::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION}};
 use entity::user;
 
 use super::utils::{map_sea_orm_error, ApiDbError};
 
 pub fn api_routes() -> Vec<Route> {
-    routes![login_challenge, register, get_my_info, edit_my_info, logout]
+    routes![login_challenge, register, get_my_info, edit_my_info, delete_account, logout]
 }
 
 #[derive(Deserialize)]
-#[serde(crate = "rocket::serde")]
 pub struct LoginChallenge {
     name: String,
     password: String,
 }
 
 #[derive(Serialize)]
-#[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub enum LoginResult {
     Once(AccessToken),
     Persist {
@@ -76,8 +74,23 @@ async fn login_challenge(
     }))
 }
 
+#[derive(Deserialize)]
+struct LoginRefresh {}
+
+#[post("/auth/login/refresh", data = "<data>")]
+async fn login_refresh(
+    request: &Request<'_>,
+    data: Json<LoginRefresh>,
+    connection: Connection<'_, Db>
+) -> Result<Json<LoginResult>, ApiDbError> {
+    let db = connection.into_inner();
+
+    
+}
+
 #[post("/auth/register", data = "<info>")]
 async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -> Result<Json<user::Model>, ApiDbError> {
+    let info = info.into_inner();
     let db = connection.into_inner();
 
     // check if name collides
@@ -98,11 +111,11 @@ async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -
     
     let user = user::ActiveModel {
         id: Default::default(),
-        name: Set(info.name.clone()),
-        nickname: Set(info.nickname.clone()),
-        email: Set(info.email.clone()),
+        name: Set(info.name),
+        nickname: Set(info.nickname),
+        email: Set(info.email),
         password_phc: Set(password_hash::hash_password(&info.password)?),
-        privileges: Set(Privileges::new(vec![Privilege::Me])),
+        privileges: Set(Privileges(vec![Privilege::Me])),
     }
     .insert(db)
     .await
@@ -113,8 +126,8 @@ async fn register(info: Json<UserCreatePatch>, connection: Connection<'_, Db>) -
 
 
 #[get("/auth/me")]
-async fn get_my_info(user: User) -> Json<User> {
-    return Json(user) // temporary; must not print everything
+async fn get_my_info(user: User) -> Json<UserData> {
+    return Json(user.into_inner()) // temporary; must not print everything
 }
 
 #[patch("/auth/me", data = "<patch>")]
@@ -128,7 +141,7 @@ async fn edit_my_info(patch: Json<UserEditPatch>, user: User, connection: Connec
         None
     };
     
-    let mut value: user::ActiveModel = user.user.into();
+    let mut value: user::ActiveModel = user.into_inner().user.into();
 
     edit!(value.nickname = patch.nickname);
     edit!(value.password_phc = password_phc);
@@ -139,11 +152,28 @@ async fn edit_my_info(patch: Json<UserEditPatch>, user: User, connection: Connec
     Ok(())
 }
 
-#[post("/auth/logout")]
-async fn logout(user: User, connection: Connection<'_, Db>) -> Result<(), ApiDbError> {
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct DeleteAccount { confirm_password: String }
+
+#[delete("/auth/me", data = "<body>")]
+async fn delete_account(body: Json<DeleteAccount>, user: User, connection: Connection<'_, Db>) -> Result<(), ApiDbError> {
+    let user_data = user.into_inner();
     let db = connection.into_inner();
 
-    user.session.delete(db).await
+    password_hash::verify_password(user_data.user.password_phc.as_str(), body.confirm_password.as_bytes())?;
+
+    user_data.user.delete(db).await.map_err(map_sea_orm_error)?;
+
+    Ok(())
+}
+
+#[post("/auth/logout")]
+async fn logout(user: User, connection: Connection<'_, Db>) -> Result<(), ApiDbError> {
+    let user_data = user.into_inner();
+    let db = connection.into_inner();
+
+    user_data.session.delete(db).await
         .map_err(map_sea_orm_error)?;
 
     Ok(())
