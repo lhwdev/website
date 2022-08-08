@@ -78,7 +78,7 @@ fn transform_thin_wrapper_main(input: DeriveInput, serde: bool) -> TokenStream {
 
     let mut after = quote! {
         impl #ident {
-            fn into_inner(self) -> #inner_type {
+            pub fn into_inner(self) -> #inner_type {
                 self.#field
             }
         }

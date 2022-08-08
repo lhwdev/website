@@ -93,6 +93,17 @@ pub async fn create_session(
     .map_err(map_sea_orm_error)
 }
 
+pub async fn refresh_session(
+    db: &DatabaseConnection,
+    user: &user::Model,
+    session: &session::Model
+) -> Result<session::Model, ApiDbError> {
+    let mut model: session::ActiveModel = session.clone().into();
+    model.counter = Set(session.counter + 1);
+    
+    model.update(db).await.map_err(map_sea_orm_error)
+}
+
 pub fn create_access_token(
     user: &user::Model,
     session: &session::Model,

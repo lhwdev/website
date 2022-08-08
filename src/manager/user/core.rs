@@ -116,7 +116,7 @@ pub fn create_user_data(
     }
 }
 
-async fn parse_user_data<'a, 'r>(request: &'r Request<'_>) -> Result<UserData, ApiDbError> {
+pub async fn parse_user_data<'a, 'r>(request: &'r Request<'_>) -> Result<UserData, ApiDbError> {
     let token = parse_token(request).await?;
 
     let connection: Connection<'_, Db> = Connection::from_request(request).await.unwrap();

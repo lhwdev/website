@@ -12,7 +12,7 @@ use super::{core::{UserData, parse_token, get_token_user, get_token_session, cre
 
 
 #[derive(ThinWrapper)]
-pub struct User(UserData);
+pub struct User(pub UserData);
 
 #[async_trait]
 impl<'r> FromRequest<'r> for User {
@@ -23,7 +23,7 @@ impl<'r> FromRequest<'r> for User {
     }
 }
 
-async fn parse_user<'a, 'r>(request: &'r Request<'_>, token_kind: TokenKind) -> Result<User, ApiDbError> {
+pub async fn parse_user<'a, 'r>(request: &'r Request<'_>, token_kind: TokenKind) -> Result<User, ApiDbError> {
     let token = parse_token(request).await?;
     validate_token(&token, token_kind);
 

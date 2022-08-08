@@ -4,14 +4,17 @@ use chrono::Utc;
 use entity::user::{AccessToken, RefreshToken, UserCreatePatch, Privilege, Privileges, UserEditPatch};
 use rocket::http::Status;
 use rocket::serde::json::Json;
-use rocket::{get, post, patch, delete, routes, Route, Request};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, ActiveModelTrait, QuerySelect};
+use rocket::{get, post, patch, delete, routes, Route};
+use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, ActiveModelTrait, QuerySelect, QueryFilter, Set};
 use sea_orm_rocket::Connection;
 use serde::{Serialize, Deserialize};
 
 use crate::db::Db;
-use crate::edit;
+use crate::edit_if;
+use crate::manager::user::token::refresh_session;
+use crate::manager::user::{users, token};
 use crate::manager::user::{core::UserData, users::User, token::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION}};
+use crate::utils::RequestParam;
 use entity::user;
 
 use super::utils::{map_sea_orm_error, ApiDbError};
@@ -43,14 +46,14 @@ async fn login_challenge(
 ) -> Result<Json<LoginResult>, ApiDbError> {
     let db = connection.into_inner();
 
-    let name = &data.name[..];
+    let name = data.name.as_str();
     let user = user::Entity::find()
         .filter(user::Column::Name.eq(name))
         .one(db)
         .await
         .map_err(map_sea_orm_error)?
         .unwrap();
-    
+        
     let password = &data.password.as_bytes();
     password_hash::verify_password(&user.password_phc, password)?;
     
@@ -62,13 +65,13 @@ async fn login_challenge(
 
     Ok(Json(if let Some(is_persist) = persist && is_persist {
         let session = create_session(db, &user, now + REFRESH_TOKEN_DURATION(), true).await?;
-        let refresh_token = RefreshToken(create_refresh_token(&user, &session, now, 0));
-        let access_token = AccessToken(create_access_token(&user, &session, now, 0));
+        let refresh_token = RefreshToken(create_refresh_token(&user, &session, now, session.counter));
+        let access_token = AccessToken(create_access_token(&user, &session, now, session.counter));
 
         LoginResult::Persist { refresh_token, access_token }
     } else {
         let session = create_session(db, &user, now + ACCESS_TOKEN_DURATION(), false).await?;
-        let access_token = AccessToken(create_access_token(&user, &session, now, 0));
+        let access_token = AccessToken(create_access_token(&user, &session, now, session.counter));
         
         LoginResult::Once(access_token)
     }))
@@ -79,13 +82,23 @@ struct LoginRefresh {}
 
 #[post("/auth/login/refresh", data = "<data>")]
 async fn login_refresh(
-    request: &Request<'_>,
+    request: RequestParam<'_>,
     data: Json<LoginRefresh>,
     connection: Connection<'_, Db>
 ) -> Result<Json<LoginResult>, ApiDbError> {
     let db = connection.into_inner();
 
+    let user_data: UserData = users::parse_user(request.0, token::TokenKind::Refresh).await?.into_inner();
     
+    let now = Utc::now();
+    let user = user_data.user;
+    let session = refresh_session(&db, &user, &user_data.session).await?;
+    let inc = session.counter;
+    
+    let refresh_token = RefreshToken(create_refresh_token(&user, &session, now, inc));
+    let access_token = AccessToken(create_access_token(&user, &session, now, inc));
+
+    Ok(Json(LoginResult::Persist { refresh_token, access_token }))
 }
 
 #[post("/auth/register", data = "<info>")]
@@ -143,9 +156,9 @@ async fn edit_my_info(patch: Json<UserEditPatch>, user: User, connection: Connec
     
     let mut value: user::ActiveModel = user.into_inner().user.into();
 
-    edit!(value.nickname = patch.nickname);
-    edit!(value.password_phc = password_phc);
-    edit!(value.email = patch.email);
+    edit_if!(value.nickname = patch.nickname);
+    edit_if!(value.password_phc = password_phc);
+    edit_if!(value.email = patch.email);
 
     value.update(db).await.map_err(map_sea_orm_error)?;
 
