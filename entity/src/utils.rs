@@ -4,7 +4,8 @@ use rocket::serde::{Serialize, Deserialize};
 
 pub type Time = chrono::DateTime<chrono::Utc>;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[repr(transparent)]
 #[serde(crate = "rocket::serde")]
 pub struct RawTime(i64);
 

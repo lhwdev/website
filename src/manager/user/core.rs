@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use futures::Future;
 use rocket::{
     http::Status,
     request::{FromRequest, Outcome},
@@ -60,6 +61,17 @@ pub fn map_parse_result<T>(
     }
 }
 
+#[inline(always)]
+pub async fn map_parse_result_from<T, R>(
+    request: &Request<'_>,
+    block: impl FnOnce() -> R,
+) -> Outcome<T, ApiDbError>
+where
+    R: Future<Output = Result<T, ApiDbError>>,
+{
+    map_parse_result(request, block().await)
+}
+
 // Note: validation is bad design, consider to make it 'parse'-only
 
 pub async fn parse_token<'r>(request: &'r Request<'_>) -> Result<RawTokenInfo, ApiDbError> {
@@ -87,7 +99,7 @@ pub async fn get_token_user(
 
 pub async fn get_token_session(
     token: &RawTokenInfo,
-    user: &user::Model,
+    _user: &user::Model,
     db: &DatabaseConnection,
 ) -> Result<session::Model, ApiDbError> {
     session::Entity::find_by_id(token.sid)

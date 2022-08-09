@@ -12,15 +12,14 @@ use serde::{Serialize, Deserialize};
 use crate::db::Db;
 use crate::edit_if;
 use crate::manager::user::token::refresh_session;
-use crate::manager::user::{users, token};
+use crate::manager::user::users::RefreshUser;
 use crate::manager::user::{core::UserData, users::User, token::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION}};
-use crate::utils::RequestParam;
 use entity::user;
 
 use super::utils::{map_sea_orm_error, ApiDbError};
 
 pub fn api_routes() -> Vec<Route> {
-    routes![login_challenge, register, get_my_info, edit_my_info, delete_account, logout]
+    routes![login_challenge, login_refresh, register, get_my_info, edit_my_info, delete_account, logout]
 }
 
 #[derive(Deserialize)]
@@ -80,15 +79,14 @@ async fn login_challenge(
 #[derive(Deserialize)]
 struct LoginRefresh {}
 
-#[post("/auth/login/refresh", data = "<data>")]
+#[post("/auth/login/refresh", data = "<_data>")]
 async fn login_refresh(
-    request: RequestParam<'_>,
-    data: Json<LoginRefresh>,
+    user: RefreshUser,
+    _data: Json<LoginRefresh>, // why do I need this - consider removing
     connection: Connection<'_, Db>
 ) -> Result<Json<LoginResult>, ApiDbError> {
     let db = connection.into_inner();
-
-    let user_data: UserData = users::parse_user(request.0, token::TokenKind::Refresh).await?.into_inner();
+    let user_data = user.into_inner();
     
     let now = Utc::now();
     let user = user_data.user;

@@ -95,7 +95,7 @@ pub async fn create_session(
 
 pub async fn refresh_session(
     db: &DatabaseConnection,
-    user: &user::Model,
+    _user: &user::Model,
     session: &session::Model
 ) -> Result<session::Model, ApiDbError> {
     let mut model: session::ActiveModel = session.clone().into();
