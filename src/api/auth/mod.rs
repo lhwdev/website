@@ -11,9 +11,9 @@ use serde::{Serialize, Deserialize};
 
 use crate::db::Db;
 use crate::edit_if;
+use crate::handle::user::{RefreshUser, User, UserHandle};
 use crate::manager::user::token::refresh_session;
-use crate::manager::user::users::RefreshUser;
-use crate::manager::user::{core::UserData, users::User, token::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION}};
+use crate::manager::user::{core::UserData, token::{create_session, REFRESH_TOKEN_DURATION, create_access_token, create_refresh_token, ACCESS_TOKEN_DURATION}};
 use entity::user;
 
 use super::utils::{map_sea_orm_error, ApiDbError};
@@ -145,6 +145,7 @@ async fn get_my_info(user: User) -> Json<UserData> {
 async fn edit_my_info(patch: Json<UserEditPatch>, user: User, connection: Connection<'_, Db>) -> Result<(), ApiDbError> {
     let patch = patch.into_inner();
     let db = connection.into_inner();
+    let user_data = user.into_inner();
 
     let password_phc = if let Some(pass) = &patch.password {
         Some(password_hash::hash_password(pass)?)
@@ -152,7 +153,7 @@ async fn edit_my_info(patch: Json<UserEditPatch>, user: User, connection: Connec
         None
     };
     
-    let mut value: user::ActiveModel = user.into_inner().user.into();
+    let mut value: user::ActiveModel = user_data.user.into();
 
     edit_if!(value.nickname = patch.nickname);
     edit_if!(value.password_phc = password_phc);

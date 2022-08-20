@@ -6,6 +6,7 @@ mod files;
 mod db;
 mod utils;
 mod manager;
+mod handle;
 
 mod catchers;
 

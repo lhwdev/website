@@ -1,9 +1,8 @@
 POST http://127.0.0.1:8000/api/post/item
 Content-Type: application/json
-Authorization: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjEsInNpZCI6MSwiaWF0IjoxNjU4NzU2OTg5NjUxLCJleHAiOjE2NTg3OTI5ODk2NTEsImlzcyI6ImNyZWF0ZV90b2tlbiIsImluYyI6MCwia2luZCI6ImFjY2VzcyJ9.sYEJW-mYkcJuRrxftZm2JjMZTnMZKBQGUOCwrHHQGK8
+Authorization: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjEsInNpZCI6NCwiaWF0IjoxNjYwMDEwNzI1MTEwLCJleHAiOjE2NjAwNDY3MjUxMTAsImlzcyI6ImNyZWF0ZV90b2tlbiIsImluYyI6MCwia2luZCI6ImFjY2VzcyJ9.NAOgcFMafGsBp2X7jQa8kxbBgKeHmmvV04JHVvK3nQk
 
 {
-  "id": 0,
   "title": "Hello, world 2!",
   "text": "I am a iron man"
 }

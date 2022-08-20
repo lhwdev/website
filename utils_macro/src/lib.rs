@@ -1,13 +1,15 @@
+use std::str::FromStr;
+
 use darling::FromMeta;
-use proc_macro2::{Ident, Literal, TokenStream, TokenTree};
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, ExprPath, Path, PathArguments, Type};
+use syn::{parse_macro_input, Data, DeriveInput, Path};
 
 #[derive(FromMeta)]
 #[darling(default)]
 struct ThinWrapperData {
     constructor: bool,
-    field: Option<Ident>,
+    field: Option<String>,
 }
 
 impl Default for ThinWrapperData {
@@ -54,27 +56,8 @@ fn transform_thin_wrapper_main(input: DeriveInput, serde: bool) -> TokenStream {
 
     let field = attr
         .field
-        .map(|ident| TokenTree::Ident(ident))
-        .unwrap_or_else(|| TokenTree::Literal(Literal::i32_unsuffixed(0)));
-
-    // Type is inferred here / Type<Argument>::deserialize is wrong grammer
-    let inner_type_mapped = if let Type::Path(path) = inner_type {
-        let mut path = path.clone();
-        let segments = &mut path.path.segments;
-        for segment in segments {
-            if let PathArguments::AngleBracketed(_) = &segment.arguments {
-                segment.arguments = PathArguments::None;
-            }
-        }
-
-        ExprPath {
-            attrs: vec![],
-            qself: path.qself,
-            path: path.path,
-        }
-    } else {
-        unreachable!();
-    };
+        .unwrap_or_else(|| "0".to_string());
+    let field = TokenStream::from_str(field.as_str()).unwrap();
 
     let mut after = quote! {
         impl #ident {
@@ -111,7 +94,7 @@ fn transform_thin_wrapper_main(input: DeriveInput, serde: bool) -> TokenStream {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
                     D: serde::Deserializer<'de> {
-                    Ok(#ident::new(#inner_type_mapped::deserialize(deserializer)?))
+                    Ok(#ident::new(<#inner_type>::deserialize(deserializer)?))
                 }
             }
         });
